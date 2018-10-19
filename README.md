@@ -37,7 +37,8 @@ So I made it possible to register snippets with description and search them easi
 - [Main features](#main-features)
 - [Examples](#examples)
     - [Register the previous command easily](#register-the-previous-command-easily)
-        - [bash/zsh](#bashzsh)
+        - [bash](#bash-prev-function)
+        - [zsh](#zsh-prev-function)
         - [fish](#fish)
     - [Select snippets at the current line (like C-r)](#select-snippets-at-the-current-line-like-c-r)
         - [bash](#bash)
@@ -71,15 +72,24 @@ So I made it possible to register snippets with description and search them easi
 - Search snippets interactively.
 - Run snippets directly.
 - Edit snippets easily (config is just a TOML file).
-- Sync snippets via Gist automatically.
+- Sync snippets via Gist or GitLab Snippets automatically.
 
 # Examples
 Some examples are shown below.
 
 ## Register the previous command easily
-
-### bash/zsh
 By adding the following config to `.bashrc` or `.zshrc`, you can easily register the previous command.
+
+### bash prev function
+
+```
+function prev() {
+  PREV=$(echo `history | tail -n2 | head -n1` | sed 's/[0-9]* //')
+  sh -c "pet new `printf %q "$PREV"`"
+}
+```
+
+### zsh prev function
 
 ```
 $ cat .zshrc
@@ -209,12 +219,23 @@ Run `pet configure`
   snippetfile = "path/to/snippet" # specify snippet directory
   editor = "vim"                  # your favorite text editor
   column = 40                     # column size for list command
-  selectcmd = "fzf"              # selector command for edit command (fzf or peco)
+  selectcmd = "fzf"               # selector command for edit command (fzf or peco)
+  backend = "gist"                # specify backend service to sync snippets (gist or gitlab, default: gist)
 
 [Gist]
   file_name = "pet-snippet.toml"  # specify gist file name
   access_token = ""               # your access token
   gist_id = ""                    # Gist ID
+  public = false                  # public or priate
+  auto_sync = false               # sync automatically when editing snippets
+
+[GitLab]
+  file_name = "pet-snippet.toml"  # specify GitLab Snippets file name
+  access_token = "XXXXXXXXXXXXX"  # your access token
+  id = ""                         # GitLab Snippets ID
+  visibility = "private"          # public or internal or private
+  auto_sync = false               # sync automatically when editing snippets
+
 ```
 
 ## Selector option
@@ -264,6 +285,7 @@ $ pet search
 ```
 
 ## Sync
+### Gist
 You must obtain access token.
 Go https://github.com/settings/tokens/new and create access token (only need "gist" scope).
 Set that to `access_token` in `[Gist]`.
@@ -293,9 +315,37 @@ Upload success
 
 *Note: `-u` option is deprecated*
 
+### GitLab Snippets
+You must obtain access token.
+Go https://gitlab.com/profile/personal_access_tokens and create access token.
+Set that to `access_token` in `[GitLab]`.
+
+After setting, you can upload snippets to GitLab Snippets.
+If `id` is not set, new snippet will be created.
+```
+$ pet sync
+GitLab Snippet ID: 12345678
+Upload success
+```
+
+Set `GitLab Snippet ID` to `id` in `[GitLab]`.
+`pet sync` compares the local file and gitlab with the update date and automatically download or upload.
+
+If the local file is older than gitlab, `pet sync` download snippets.
+```
+$ pet sync
+Download success
+```
+
+If gitlab is older than the local file, `pet sync` upload snippets.
+```
+$ pet sync
+Upload success
+```
+
 ## Auto Sync
-You can sync snippets automatically.  
-Set `true` to `auto_sync` in `[Gist]`.  
+You can sync snippets automatically.
+Set `true` to `auto_sync` in `[Gist]` or `[GitLab]`.
 Then, your snippets sync automatically when `pet new` or `pet edit`.
 
 ```
